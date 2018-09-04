@@ -7,10 +7,8 @@ class ray
 {
 public:
     ray() {}
-    ray(const glm::vec3& pt, const glm::vec3& dir) { Pt = pt; Dir = dir; }
-    glm::vec3 origin() { return Pt; }
-    glm::vec3 direction() { return Dir; }
-    glm::vec3 point_at_parameter(float t) { return Pt + t * Dir; }
+    ray(const glm::vec3& pt, const glm::vec3& dir) { this->pt = pt; this->dir = dir; }
+    glm::vec3 point_at_parameter(float t) const { return pt + t * dir; }
 
-    glm::vec3 Pt, Dir;
+    glm::vec3 pt, dir;
 };
