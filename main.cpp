@@ -2,13 +2,12 @@
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "stb_image_write.h"
 
-#include "glm\glm.hpp"
-
 #include <string>
 #include <algorithm>
 #include <iostream>
 
-#include "ray.h"
+#include "sphere.h"
+#include "hittable_list.h"
 
 using namespace std;
 
@@ -45,57 +44,26 @@ void write_image(glm::vec4* pData)
     delete pOutData;
 }
 
-float hit_sphere(const glm::vec3& center, float radius, const ray& r)
+glm::vec4 color(const ray& r, hittable* world)
 {
-    glm::vec3 oc = r.pt - center;
-    float a = glm::dot(r.dir, r.dir);
-    float b = 2.0f * glm::dot(oc, r.dir);
-    float c = dot(oc, oc) - radius * radius;
-    float disc = b * b - 4 * a * c;
-    if (disc < 0.0f)
+    hit_record rec;
+    if (world->hit(r, 0.0f, FLT_MAX, rec))
     {
-        return -1.0f;
+        glm::vec3 N = 0.5f * (rec.normal + glm::vec3(1.0f, 1.0f, 1.0f));
+        return glm::vec4(N.x, N.y, N.z, 1.0f);
     }
     else
     {
-        return (-b - sqrtf(disc)) / (2.0f * a);
+        // otherwise set color based on y of normalized dir.
+        glm::vec3 dir_normalized = glm::normalize(r.dir);
+        float t = 0.5f * (dir_normalized.y + 1.0f);
+        return (1.0f - t) * glm::vec4(1.0f, 1.0f, 1.0f, 1.0f) + t * glm::vec4(0.5f, 0.7f, 1.0f, 1.0f);
     }
-}
-
-glm::vec4 color(const ray& r)
-{
-    glm::vec3 center(0.0f, 0.0f, -1.0f);
-
-    float t = hit_sphere(center, 0.5f, r);
-    if (t > 0.0f)
-    {
-        glm::vec3 N = glm::normalize(r.point_at_parameter(t) - center);
-        N = 0.5f * (N + glm::vec3(1.0f, 1.0f, 1.0f));
-        return glm::vec4(N.x, N.y, N.z, 1.0f);
-    }
-
-    // otherwise set color based on y of normalized dir.
-    glm::vec3 dir_normalized = glm::normalize(r.dir);
-    t = 0.5f * (dir_normalized.y + 1.0f);
-    return (1.0f - t) * glm::vec4(1.0f, 1.0f, 1.0f, 1.0f) + t * glm:: vec4(0.5f, 0.7f, 1.0f, 1.0f);
 }
 
 int main(int argc, char** argv)
 {
     glm::vec4* pData = new glm::vec4[w * h];
-
-    //for (int y = 0; y < h; y++)
-    //{
-    //    for (int x = 0; x < w; x++)
-    //    {
-    //        glm::vec4 v;
-    //        v.r = (float)x / (float)w;
-    //        v.g = (float)y / (float)h;
-    //        v.b = 0.2f;
-    //        v.a = 1.0f;
-    //        pData[y * w + x] = v;
-    //    }
-    //}
 
     float aspectRatio = (float)w / (float)h;
 
@@ -103,6 +71,12 @@ int main(int argc, char** argv)
     glm::vec3 horizontal(2.0f * aspectRatio, 0.0f, 0.0f);
     glm::vec3 vertical(0.0f, 2.0f, 0.0f);
     glm::vec3 origin(0.0f, 0.0f, 0.0f);
+
+    vector<hittable*> list;
+    list.push_back(new sphere(glm::vec3(0.0f, 0.0f, -1.0f), 0.5f));
+    list.push_back(new sphere(glm::vec3(0.0f, -100.5f, -1.0f), 100.0f));
+
+    hittable* world = new hittable_list(list);
 
     cout << "Ray tracing!!!\n" << endl;
     for (int y = 0; y < h; y++)
@@ -112,7 +86,7 @@ int main(int argc, char** argv)
             float u = (float)x / (float)w;
             float v = (float)y / (float)h;
             ray r(origin, lowerleft + u * horizontal + v * vertical);
-            pData[y * w + x] = color(r);            
+            pData[y * w + x] = color(r, world);            
         }
         if ((y + 1) % 20 == 0)
         {
@@ -123,6 +97,7 @@ int main(int argc, char** argv)
 
     write_image(pData);
 
+    delete world;
     delete pData;
 
     return 0;
