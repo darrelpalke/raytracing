@@ -20,7 +20,9 @@ void write_image(glm::vec4* pData)
 {
     cout << "Converting image.\n" << endl;
     uint32_t* pOutData = new uint32_t[w * h];
-    for (int y = 0; y < h; y++)
+
+    int offset = 0;
+    for (int y = h - 1; y >= 0; y--)
     {
         for (int x = 0; x < w; x++)
         {
@@ -28,7 +30,7 @@ void write_image(glm::vec4* pData)
             uint32_t g = max(min((int)(255.0f * pData[y * w + x].g), 255), 0);
             uint32_t b = max(min((int)(255.0f * pData[y * w + x].b), 255), 0);
             uint32_t a = max(min((int)(255.0f * pData[y * w + x].a), 255), 0);
-            pOutData[y * w + x] = r | (g << 8) | (b << 16) | (a << 24);
+            pOutData[offset++] = r | (g << 8) | (b << 16) | (a << 24);
         }
 
         if ((y + 1) % 20 == 0)
@@ -43,24 +45,38 @@ void write_image(glm::vec4* pData)
     delete pOutData;
 }
 
-bool hit_sphere(const glm::vec3& center, float radius, const ray& r)
+float hit_sphere(const glm::vec3& center, float radius, const ray& r)
 {
     glm::vec3 oc = r.pt - center;
     float a = glm::dot(r.dir, r.dir);
     float b = 2.0f * glm::dot(oc, r.dir);
     float c = dot(oc, oc) - radius * radius;
     float disc = b * b - 4 * a * c;
-    return disc > 0.0f;
+    if (disc < 0.0f)
+    {
+        return -1.0f;
+    }
+    else
+    {
+        return (-b - sqrtf(disc)) / (2.0f * a);
+    }
 }
 
 glm::vec4 color(const ray& r)
 {
-    if (hit_sphere(glm::vec3(0.0f, 0.0f, -1.0f), 0.5f, r))
+    glm::vec3 center(0.0f, 0.0f, -1.0f);
+
+    float t = hit_sphere(center, 0.5f, r);
+    if (t > 0.0f)
     {
-        return glm::vec4(1.0f, 0.0f, 0.0f, 1.0f);
+        glm::vec3 N = glm::normalize(r.point_at_parameter(t) - center);
+        N = 0.5f * (N + glm::vec3(1.0f, 1.0f, 1.0f));
+        return glm::vec4(N.x, N.y, N.z, 1.0f);
     }
+
+    // otherwise set color based on y of normalized dir.
     glm::vec3 dir_normalized = glm::normalize(r.dir);
-    float t = 0.5f * (dir_normalized.y + 1.0f);
+    t = 0.5f * (dir_normalized.y + 1.0f);
     return (1.0f - t) * glm::vec4(1.0f, 1.0f, 1.0f, 1.0f) + t * glm:: vec4(0.5f, 0.7f, 1.0f, 1.0f);
 }
 
@@ -108,9 +124,6 @@ int main(int argc, char** argv)
     write_image(pData);
 
     delete pData;
-
-    cout << "Press enter to exit!" << endl;
-    int a = getchar();
 
     return 0;
 }

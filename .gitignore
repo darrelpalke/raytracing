@@ -2,9 +2,7 @@
 glm-*/
 
 # build directories
-Debug/
-Release/
-x64/
+bin/
 
 *.user
 .vs/
