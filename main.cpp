@@ -5,6 +5,9 @@
 #include <string>
 #include <algorithm>
 #include <iostream>
+#include <ctime>
+
+#include "camera.h"
 
 #include "sphere.h"
 #include "hittable_list.h"
@@ -13,6 +16,8 @@ using namespace std;
 
 const int w = 1024;
 const int h = 768;
+const int ns = 10;
+
 const string outputFileName = "out.png";
 
 void write_image(glm::vec4* pData)
@@ -63,30 +68,30 @@ glm::vec4 color(const ray& r, hittable* world)
 
 int main(int argc, char** argv)
 {
+    srand((int)time(nullptr));
+
     glm::vec4* pData = new glm::vec4[w * h];
-
-    float aspectRatio = (float)w / (float)h;
-
-    glm::vec3 lowerleft(-aspectRatio, -1.0f, -1.0f);
-    glm::vec3 horizontal(2.0f * aspectRatio, 0.0f, 0.0f);
-    glm::vec3 vertical(0.0f, 2.0f, 0.0f);
-    glm::vec3 origin(0.0f, 0.0f, 0.0f);
 
     vector<hittable*> list;
     list.push_back(new sphere(glm::vec3(0.0f, 0.0f, -1.0f), 0.5f));
     list.push_back(new sphere(glm::vec3(0.0f, -100.5f, -1.0f), 100.0f));
 
     hittable* world = new hittable_list(list);
+    camera cam(w, h);
 
     cout << "Ray tracing!!!\n" << endl;
+
+    int output = 0;
     for (int y = 0; y < h; y++)
     {
         for (int x = 0; x < w; x++)
         {
-            float u = (float)x / (float)w;
-            float v = (float)y / (float)h;
-            ray r(origin, lowerleft + u * horizontal + v * vertical);
-            pData[y * w + x] = color(r, world);            
+            glm::vec4 col;
+            for (int i = 0; i < ns; i++)
+            {
+                col += color(cam.get_ray(x, y, ns > 1), world);
+            }
+            pData[output++] = col / (float)max(ns, 1);           
         }
         if ((y + 1) % 20 == 0)
         {
